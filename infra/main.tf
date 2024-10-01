@@ -23,13 +23,14 @@ module "ecs_cluster" {
 variable "apps" {
   description = "List of applications to deploy"
   type = list(object({
-    name            = string
-    container_image = string
-    container_port  = number
-    cpu             = string
-    memory          = string
-    desired_count   = number
-    path_pattern    = string
+    name                  = string
+    container_image       = string
+    container_port        = number
+    cpu                   = string
+    memory                = string
+    desired_count         = number
+    path_pattern          = string
+    environment_variables = map(string)
   }))
   default = [
     {
@@ -40,6 +41,10 @@ variable "apps" {
       memory          = "512"
       desired_count   = 2
       path_pattern    = "/app1*"
+      environment_variables = {
+        DYNAMODB_TABLE = "my-app1-table"
+        S3_BUCKET      = "my-app1-bucket"
+      }
     },
     {
       name            = "app2"
@@ -49,6 +54,10 @@ variable "apps" {
       memory          = "512"
       desired_count   = 2
       path_pattern    = "/app2*"
+      environment_variables = {
+        DYNAMODB_TABLE = "my-app2-table"
+        S3_BUCKET      = "my-app2-bucket"
+      }
     }
   ]
 }
@@ -71,6 +80,95 @@ module "ecs_services" {
   alb_security_group_id       = module.load_balancer.alb_security_group_id
   lb_listener                 = module.load_balancer.lb_listener
   target_group_arn            = module.load_balancer.target_group_arns[count.index]
+  environment_variables       = var.apps[count.index].environment_variables
+}
+
+# Policies for app1
+resource "aws_iam_role_policy" "app1_dynamodb_policy" {
+  name = "app1-dynamodb-policy"
+  role = module.ecs_services[0].task_role_id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:Scan"
+        ]
+        Resource = "arn:aws:dynamodb:*:*:table/my-app1-table"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "app1_s3_policy" {
+  name = "app1-s3-policy"
+  role = module.ecs_services[0].task_role_id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::my-app1-bucket",
+          "arn:aws:s3:::my-app1-bucket/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Policies for app2
+resource "aws_iam_role_policy" "app2_dynamodb_policy" {
+  name = "app2-dynamodb-policy"
+  role = module.ecs_services[1].task_role_id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:Query"
+        ]
+        Resource = "arn:aws:dynamodb:*:*:table/my-app2-table"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "app2_s3_policy" {
+  name = "app2-s3-policy"
+  role = module.ecs_services[1].task_role_id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::my-app2-bucket",
+          "arn:aws:s3:::my-app2-bucket/*"
+        ]
+      }
+    ]
+  })
 }
 
 output "alb_dns_name" {

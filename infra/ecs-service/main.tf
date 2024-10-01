@@ -72,9 +72,32 @@ variable "target_group_arn" {
   type        = string
 }
 
+variable "environment_variables" {
+  description = "Environment variables for the container"
+  type        = map(string)
+  default     = {}
+}
+
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${var.app_name}"
   retention_in_days = 30
+}
+
+resource "aws_iam_role" "task_role" {
+  name = "${var.app_name}-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
 }
 
 resource "aws_ecs_task_definition" "app" {
@@ -84,6 +107,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = var.cpu
   memory                   = var.memory
   execution_role_arn       = var.task_execution_role_arn
+  task_role_arn            = aws_iam_role.task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -93,6 +117,12 @@ resource "aws_ecs_task_definition" "app" {
         {
           containerPort = var.container_port
           hostPort      = var.container_port
+        }
+      ]
+      environment = [
+        for key, value in var.environment_variables : {
+          name  = key
+          value = value
         }
       ]
       logConfiguration = {
@@ -127,4 +157,8 @@ resource "aws_ecs_service" "app" {
   }
 
   depends_on = [var.lb_listener]
+}
+
+output "task_role_id" {
+  value = aws_iam_role.task_role.id
 }
