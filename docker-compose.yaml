@@ -1,0 +1,32 @@
+services:
+  app1:
+    build:
+      context: ./app1
+      dockerfile: Dockerfile
+    ports:
+      - 8001:8000
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./app1:/app
+    environment:
+      - APP2_URL=http://app2:8000
+    networks:
+      - app-network
+
+  app2:
+    build:
+      context: ./app2
+      dockerfile: Dockerfile
+    ports:
+      - 8002:8000
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./app2:/app
+    environment:
+      - APP1_URL=http://app1:8000
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
