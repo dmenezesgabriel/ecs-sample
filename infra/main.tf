@@ -23,36 +23,48 @@ module "ecs_cluster" {
 variable "apps" {
   description = "List of applications to deploy"
   type = list(object({
-    name                  = string
-    container_image       = string
-    container_port        = number
-    cpu                   = string
-    memory                = string
-    desired_count         = number
-    path_pattern          = string
-    environment_variables = map(string)
+    name                     = string
+    container_image          = string
+    container_port           = number
+    cpu                      = string
+    memory                   = string
+    desired_count            = number
+    path_pattern             = string
+    enable_autoscaling       = bool
+    autoscaling_min_capacity = number
+    autoscaling_max_capacity = number
+    autoscaling_cpu_target   = number
+    environment_variables    = map(string)
   }))
   default = [
     {
-      name            = "app1"
-      container_image = "dmenezesgabriel/fastapi-app1:v2"
-      container_port  = 8000
-      cpu             = "256"
-      memory          = "512"
-      desired_count   = 2
-      path_pattern    = "/app1*"
+      name                     = "app1"
+      container_image          = "dmenezesgabriel/fastapi-app1:v3"
+      container_port           = 8000
+      cpu                      = "256"
+      memory                   = "512"
+      desired_count            = 2
+      path_pattern             = "/app1*"
+      enable_autoscaling       = true
+      autoscaling_min_capacity = 1
+      autoscaling_max_capacity = 3
+      autoscaling_cpu_target   = 70
       environment_variables = {
         APP2_URL = "http://app2.sample-ecs-cluster.local:8000"
       }
     },
     {
-      name            = "app2"
-      container_image = "dmenezesgabriel/fastapi-app2:v2"
-      container_port  = 8000
-      cpu             = "256"
-      memory          = "512"
-      desired_count   = 2
-      path_pattern    = "/app2*"
+      name                     = "app2"
+      container_image          = "dmenezesgabriel/fastapi-app2:v3"
+      container_port           = 8000
+      cpu                      = "256"
+      memory                   = "512"
+      desired_count            = 2
+      path_pattern             = "/app2*"
+      enable_autoscaling       = true
+      autoscaling_min_capacity = 1
+      autoscaling_max_capacity = 3
+      autoscaling_cpu_target   = 70
       environment_variables = {
         APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
       }
@@ -81,6 +93,10 @@ module "ecs_services" {
   environment_variables          = var.apps[count.index].environment_variables
   enable_service_discovery       = true
   service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
+  enable_autoscaling             = var.apps[count.index].enable_autoscaling
+  autoscaling_min_capacity       = var.apps[count.index].autoscaling_min_capacity
+  autoscaling_max_capacity       = var.apps[count.index].autoscaling_max_capacity
+  autoscaling_cpu_target         = var.apps[count.index].autoscaling_cpu_target
 }
 
 resource "aws_security_group_rule" "allow_inter_service_communication" {

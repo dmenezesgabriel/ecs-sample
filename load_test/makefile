@@ -1,0 +1,2 @@
+run:
+	locust --host=""

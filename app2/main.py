@@ -1,4 +1,5 @@
 import os
+import time
 
 import requests
 from fastapi import FastAPI
@@ -11,6 +12,14 @@ APP1_URL = os.getenv("APP1_URL")
 @app.get("/")
 def read_root():
     return {"message": "Hello from App2"}
+
+
+@app.get("/cpu-intensive")
+def cpu_intensive():
+    start_time = time.time()
+    while time.time() - start_time < 5:
+        _ = [i**2 for i in range(10000)]
+    return {"message": "CPU intensive task completed"}
 
 
 @app.get("/health")
