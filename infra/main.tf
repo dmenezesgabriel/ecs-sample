@@ -47,7 +47,7 @@ variable "apps" {
       path_pattern             = "/app1*"
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
-      autoscaling_max_capacity = 3
+      autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
         APP2_URL = "http://app2.sample-ecs-cluster.local:8000"
@@ -63,7 +63,23 @@ variable "apps" {
       path_pattern             = "/app2*"
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
-      autoscaling_max_capacity = 3
+      autoscaling_max_capacity = 5
+      autoscaling_cpu_target   = 70
+      environment_variables = {
+        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+      }
+    },
+    {
+      name                     = "app3"
+      container_image          = "dmenezesgabriel/nextjs-app3:v3"
+      container_port           = 3000
+      cpu                      = "256"
+      memory                   = "512"
+      desired_count            = 2
+      path_pattern             = "/app3*"
+      enable_autoscaling       = true
+      autoscaling_min_capacity = 1
+      autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
         APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
