@@ -1,5 +1,10 @@
 FROM python:3.9-slim
 
+# Prevents Python from writing pyc files to disc
+ENV PYTHONDONTWRITEBYTECODE=1
+# Prevents Python from buffering stdout and stderr
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 COPY requirements.txt .

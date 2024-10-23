@@ -9,11 +9,15 @@
 Push images (replace the name with your docker hub user)
 
 ```sh
-docker build -t dmenezesgabriel/fastapi-app1:v1 ./app1
-docker build -t dmenezesgabriel/fastapi-app2:v1 ./app2
+docker build -t dmenezesgabriel/fastapi-app1:v3 ./app1
+docker build -t dmenezesgabriel/fastapi-app2:v3 ./app2
+docker build -t dmenezesgabriel/nextjs-app3:v3 ./app3
 
-docker push dmenezesgabriel/fastapi-app1:v1
-docker push dmenezesgabriel/fastapi-app2:v1
+
+docker push dmenezesgabriel/fastapi-app1:v3
+docker push dmenezesgabriel/fastapi-app2:v3
+docker push dmenezesgabriel/nextjs-app3:v3
+
 ```
 
 Then `cd` into infra

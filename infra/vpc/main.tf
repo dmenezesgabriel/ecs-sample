@@ -68,6 +68,7 @@ resource "aws_route_table_association" "public" {
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/vpc/flow-logs"
   retention_in_days = 30
+  depends_on        = [aws_vpc.main]
 }
 
 resource "aws_flow_log" "main" {
@@ -75,6 +76,7 @@ resource "aws_flow_log" "main" {
   log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
   traffic_type    = "ALL"
   vpc_id          = aws_vpc.main.id
+  depends_on      = [aws_cloudwatch_log_group.vpc_flow_logs]
 }
 
 resource "aws_iam_role" "vpc_flow_log_role" {
