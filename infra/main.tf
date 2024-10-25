@@ -29,7 +29,7 @@ variable "apps" {
     cpu                      = string
     memory                   = string
     desired_count            = number
-    path_pattern             = string
+    route_path               = string
     enable_autoscaling       = bool
     autoscaling_min_capacity = number
     autoscaling_max_capacity = number
@@ -44,7 +44,7 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      path_pattern             = "/app1*"
+      route_path               = "/app1"
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -60,7 +60,7 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      path_pattern             = "/app2*"
+      route_path               = "/app2"
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -76,7 +76,7 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      path_pattern             = "/app3*"
+      route_path               = "/app3"
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -165,7 +165,7 @@ resource "aws_iam_role_policy" "app1_s3_policy" {
         ]
         Resource = [
           "arn:aws:s3:::my-app1-bucket",
-          "arn:aws:s3:::my-app1-bucket/*"
+          "arn:aws:s3:::my-app1-bucket/"
         ]
       }
     ]
@@ -206,7 +206,7 @@ resource "aws_iam_role_policy" "app2_s3_policy" {
         ]
         Resource = [
           "arn:aws:s3:::my-app2-bucket",
-          "arn:aws:s3:::my-app2-bucket/*"
+          "arn:aws:s3:::my-app2-bucket/"
         ]
       }
     ]

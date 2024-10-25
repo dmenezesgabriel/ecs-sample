@@ -13,7 +13,7 @@ variable "apps" {
   type = list(object({
     name           = string
     container_port = number
-    path_pattern   = string
+    route_path     = string
   }))
 }
 
@@ -71,7 +71,7 @@ resource "aws_lb_target_group" "apps" {
   target_type = "ip"
 
   health_check {
-    path                = "/${var.apps[count.index].name}/health"
+    path                = "/${var.apps[count.index].route_path}/health"
     port                = var.apps[count.index].container_port
     healthy_threshold   = 2
     unhealthy_threshold = 10
@@ -93,7 +93,7 @@ resource "aws_lb_listener_rule" "app_rules" {
 
   condition {
     path_pattern {
-      values = [var.apps[count.index].path_pattern]
+      values = ["${var.apps[count.index].route_path}*"]
     }
   }
 }
