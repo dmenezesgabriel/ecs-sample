@@ -29,6 +29,3 @@ EXPOSE 80
 
 # Start Nginx when the container runs
 CMD ["nginx", "-g", "daemon off;"]
-
-#  http://localhost:8080/app4/health
-#  http://localhost:8080/app4/
