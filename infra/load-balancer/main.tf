@@ -71,7 +71,7 @@ resource "aws_lb_target_group" "apps" {
   target_type = "ip"
 
   health_check {
-    path                = "/${var.apps[count.index].route_path}/health"
+    path                = "${var.apps[count.index].route_path}/health"
     port                = var.apps[count.index].container_port
     healthy_threshold   = 2
     unhealthy_threshold = 10

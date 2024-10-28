@@ -56,7 +56,7 @@ COPY supervisord.conf /etc/supervisord.conf
 
 USER nextjs
 
-EXPOSE 80
+EXPOSE 8000
 
 ENV PORT=3000
 

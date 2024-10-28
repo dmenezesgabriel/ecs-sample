@@ -84,6 +84,38 @@ variable "apps" {
       environment_variables = {
         APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
       }
+    },
+    {
+      name                     = "app4"
+      container_image          = "dmenezesgabriel/nextjs-app4:v3"
+      container_port           = 80
+      cpu                      = "256"
+      memory                   = "512"
+      desired_count            = 2
+      route_path               = "/app4"
+      enable_autoscaling       = true
+      autoscaling_min_capacity = 1
+      autoscaling_max_capacity = 5
+      autoscaling_cpu_target   = 70
+      environment_variables = {
+        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+      }
+    },
+    {
+      name                     = "app5"
+      container_image          = "dmenezesgabriel/nextjs-app5:v6"
+      container_port           = 8000
+      cpu                      = "512"
+      memory                   = "1024"
+      desired_count            = 2
+      route_path               = "/app5"
+      enable_autoscaling       = true
+      autoscaling_min_capacity = 1
+      autoscaling_max_capacity = 5
+      autoscaling_cpu_target   = 70
+      environment_variables = {
+        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+      }
     }
   ]
 }
