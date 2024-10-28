@@ -27,38 +27,26 @@ RUN apk add --no-cache nginx supervisor curl
 
 WORKDIR /app
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
 # COPY --from=builder /app/public ./public
 
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
 RUN mkdir -p /run/nginx
 RUN mkdir -p /var/cache/nginx
 RUN mkdir -p /var/log/nginx
-RUN chown -R nextjs:nodejs /run/nginx
-RUN chown -R nextjs:nodejs /var/lib/nginx
-RUN chown -R nextjs:nodejs /var/log/nginx
-RUN chown -R nextjs:nodejs /var/cache/nginx
 
 COPY nginx.conf /etc/nginx/nginx.conf
-RUN chown nextjs:nodejs /etc/nginx/nginx.conf
 
 RUN mkdir -p /var/log/supervisor
-RUN chown -R nextjs:nodejs /var/log/supervisor
 
 COPY supervisord.conf /etc/supervisord.conf
-
-USER nextjs
 
 EXPOSE 8000
 
 ENV PORT=3000
-
 ENV HOSTNAME="0.0.0.0"
+
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
