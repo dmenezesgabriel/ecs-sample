@@ -103,7 +103,7 @@ variable "apps" {
     },
     {
       name                     = "app5"
-      container_image          = "dmenezesgabriel/nextjs-app5:v6"
+      container_image          = "dmenezesgabriel/nextjs-app5:v9"
       container_port           = 8000
       cpu                      = "512"
       memory                   = "1024"
