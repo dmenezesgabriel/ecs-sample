@@ -40,6 +40,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 
 RUN cat /etc/nginx/nginx.conf
 
+COPY scripts/env.sh /docker-entrypoint.d/env.sh
+RUN chmod +x /docker-entrypoint.d/env.sh
+
 # Expose ports 80 and 443 for HTTP and HTTPS
 EXPOSE 80 443
 

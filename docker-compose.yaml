@@ -27,6 +27,31 @@ services:
     networks:
       - app-network
 
+  app3:
+    build:
+      context: ./app3
+      dockerfile: Dockerfile
+    ports:
+      - 8003:3000
+    command: "node server.js"
+    environment:
+      - APP1_URL=http://app1:8000
+    networks:
+      - app-network
+
+  app4:
+    build:
+      context: ./app4
+      dockerfile: Dockerfile
+    ports:
+      - 8004:80
+      - 8444:443
+    command: "nginx -g daemon off;"
+    environment:
+      - APP1_URL=http://app1:8000
+    networks:
+      - app-network
+
 networks:
   app-network:
     driver: bridge
