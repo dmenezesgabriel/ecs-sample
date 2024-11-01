@@ -27,6 +27,7 @@ Then `cd` into infra
 ```sh
 terraform init
 terraform validate
+terraform plan
 terraform apply --auto-approve
 ```
 
