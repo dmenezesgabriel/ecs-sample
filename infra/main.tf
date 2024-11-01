@@ -8,15 +8,30 @@ locals {
   load_balancer_type = "application"
   apps = [
     {
-      name                     = "app1"
-      container_image          = "dmenezesgabriel/fastapi-app1:v3"
-      container_port           = 8000
-      cpu                      = "256"
-      memory                   = "512"
-      desired_count            = 2
-      route_path               = ["/app1*"]
-      health_route_path        = "/app1/health"
-      priority                 = 100
+      name            = "app1"
+      container_image = "dmenezesgabriel/fastapi-app1:v3"
+      container_port  = 8000
+      cpu             = "256"
+      memory          = "512"
+      desired_count   = 2
+
+      lb_target_group_config = {
+        protocol    = "HTTP",
+        target_type = "ip",
+        health_check = {
+          path                = "/app1/health",
+          healthy_threshold   = 2,
+          unhealthy_threshold = 10,
+          timeout             = 60,
+          interval            = 300,
+          matcher             = "200"
+        }
+      }
+      lb_listener_config = {
+        listener_arn = aws_lb_listener.front_end.arn
+        priority     = 100
+        path_pattern = ["/app1*"]
+      }
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -27,15 +42,29 @@ locals {
       }
     },
     {
-      name                     = "app2"
-      container_image          = "dmenezesgabriel/fastapi-app2:v3"
-      container_port           = 8000
-      cpu                      = "256"
-      memory                   = "512"
-      desired_count            = 2
-      route_path               = ["/app2*"]
-      health_route_path        = "/app2/health"
-      priority                 = 200
+      name            = "app2"
+      container_image = "dmenezesgabriel/fastapi-app2:v3"
+      container_port  = 8000
+      cpu             = "256"
+      memory          = "512"
+      desired_count   = 2
+      lb_target_group_config = {
+        protocol    = "HTTP",
+        target_type = "ip",
+        health_check = {
+          path                = "/app2/health",
+          healthy_threshold   = 2,
+          unhealthy_threshold = 10,
+          timeout             = 60,
+          interval            = 300,
+          matcher             = "200"
+        }
+      }
+      lb_listener_config = {
+        listener_arn = aws_lb_listener.front_end.arn
+        priority     = 200
+        path_pattern = ["/app2*"]
+      }
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -46,15 +75,29 @@ locals {
       }
     },
     {
-      name                     = "app3"
-      container_image          = "dmenezesgabriel/nextjs-app3:v3"
-      container_port           = 3000
-      cpu                      = "256"
-      memory                   = "512"
-      desired_count            = 2
-      route_path               = ["/app3*"]
-      health_route_path        = "/app3/health"
-      priority                 = 300
+      name            = "app3"
+      container_image = "dmenezesgabriel/nextjs-app3:v3"
+      container_port  = 3000
+      cpu             = "256"
+      memory          = "512"
+      desired_count   = 2
+      lb_target_group_config = {
+        protocol    = "HTTP",
+        target_type = "ip",
+        health_check = {
+          path                = "/app3/health",
+          healthy_threshold   = 2,
+          unhealthy_threshold = 10,
+          timeout             = 60,
+          interval            = 300,
+          matcher             = "200"
+        }
+      }
+      lb_listener_config = {
+        listener_arn = aws_lb_listener.front_end.arn
+        priority     = 300
+        path_pattern = ["/app3*"]
+      }
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -65,15 +108,29 @@ locals {
       }
     },
     {
-      name                     = "app4"
-      container_image          = "dmenezesgabriel/nextjs-app4:v3"
-      container_port           = 80
-      cpu                      = "256"
-      memory                   = "512"
-      desired_count            = 2
-      route_path               = ["/app4*"]
-      health_route_path        = "/app4/health"
-      priority                 = 400
+      name            = "app4"
+      container_image = "dmenezesgabriel/nextjs-app4:v3"
+      container_port  = 80
+      cpu             = "256"
+      memory          = "512"
+      desired_count   = 2
+      lb_target_group_config = {
+        protocol    = "HTTP",
+        target_type = "ip",
+        health_check = {
+          path                = "/app4/health",
+          healthy_threshold   = 2,
+          unhealthy_threshold = 10,
+          timeout             = 60,
+          interval            = 300,
+          matcher             = "200"
+        }
+      }
+      lb_listener_config = {
+        listener_arn = aws_lb_listener.front_end.arn
+        priority     = 400
+        path_pattern = ["/app4*"]
+      }
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -84,15 +141,29 @@ locals {
       }
     },
     {
-      name                     = "app5"
-      container_image          = "dmenezesgabriel/nextjs-app5:v9"
-      container_port           = 8000
-      cpu                      = "512"
-      memory                   = "1024"
-      desired_count            = 2
-      route_path               = ["/app5*"]
-      health_route_path        = "/app5/health"
-      priority                 = 500
+      name            = "app5"
+      container_image = "dmenezesgabriel/nextjs-app5:v9"
+      container_port  = 8000
+      cpu             = "512"
+      memory          = "1024"
+      desired_count   = 2
+      lb_target_group_config = {
+        protocol    = "HTTP",
+        target_type = "ip",
+        health_check = {
+          path                = "/app5/health",
+          healthy_threshold   = 2,
+          unhealthy_threshold = 10,
+          timeout             = 60,
+          interval            = 300,
+          matcher             = "200"
+        }
+      }
+      lb_listener_config = {
+        listener_arn = aws_lb_listener.front_end.arn
+        priority     = 500
+        path_pattern = ["/app5*"]
+      }
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
@@ -242,11 +313,9 @@ module "ecs_services" {
   subnet_ids                     = module.vpc.public_subnet_ids
   security_groups                = [aws_security_group.ecs_tasks.id]
   alb_security_group_id          = aws_security_group.alb.id
-  lb_listener                    = aws_lb_listener.front_end
-  route_path                     = local.apps[count.index].route_path
-  health_route_path              = local.apps[count.index].health_route_path
+  lb_target_group_config         = local.apps[count.index].lb_target_group_config
+  lb_listener_config             = local.apps[count.index].lb_listener_config
   environment_variables          = local.apps[count.index].environment_variables
-  priority                       = local.apps[count.index].priority
   enable_service_discovery       = true
   service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
   enable_autoscaling             = local.apps[count.index].enable_autoscaling

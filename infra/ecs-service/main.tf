@@ -54,32 +54,40 @@ variable "security_groups" {
   type = list(string)
 }
 
+variable "environment_variables" {
+  description = "Environment variables for the container"
+  type        = map(string)
+  default     = {}
+}
+
 variable "alb_security_group_id" {
   description = "ID of the ALB security group"
   type        = string
 }
 
-variable "lb_listener" {
-  description = "The Load Balancer Listener"
-  type        = any
+
+# Load balancer
+variable "lb_target_group_config" {
+  type = object({
+    protocol    = string
+    target_type = string
+    health_check = object({
+      path                = string
+      healthy_threshold   = number
+      unhealthy_threshold = number
+      timeout             = number
+      interval            = number
+      matcher             = string
+    })
+  })
 }
 
-variable "route_path" {
-  type = list(string)
-}
-
-variable "priority" {
-  type = number
-}
-
-variable "health_route_path" {
-  type = string
-}
-
-variable "environment_variables" {
-  description = "Environment variables for the container"
-  type        = map(string)
-  default     = {}
+variable "lb_listener_config" {
+  type = object({
+    listener_arn = string
+    priority     = number
+    path_pattern = list(string)
+  })
 }
 
 # Service discovery
@@ -232,7 +240,7 @@ resource "aws_ecs_service" "app" {
     }
   }
 
-  depends_on = [var.lb_listener, aws_lb_target_group.app]
+  depends_on = [aws_ecs_task_definition.app, aws_lb_target_group.app]
 }
 
 resource "aws_service_discovery_service" "this" {
@@ -258,25 +266,25 @@ resource "aws_service_discovery_service" "this" {
 # Load balancer
 resource "aws_lb_target_group" "app" {
   name        = "${var.app_name}-tg"
-  port        = var.container_port
-  protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "ip"
+  protocol    = var.lb_target_group_config.protocol
+  port        = var.container_port
+  target_type = var.lb_target_group_config.target_type
 
   health_check {
-    path                = var.health_route_path
+    path                = var.lb_target_group_config.health_check.path
     port                = var.container_port
-    healthy_threshold   = 2
-    unhealthy_threshold = 10
-    timeout             = 60
-    interval            = 300
-    matcher             = "200"
+    healthy_threshold   = var.lb_target_group_config.health_check.healthy_threshold
+    unhealthy_threshold = var.lb_target_group_config.health_check.unhealthy_threshold
+    timeout             = var.lb_target_group_config.health_check.timeout
+    interval            = var.lb_target_group_config.health_check.interval
+    matcher             = var.lb_target_group_config.health_check.matcher
   }
 }
 
 resource "aws_lb_listener_rule" "app_rules" {
-  listener_arn = var.lb_listener.arn
-  priority     = var.priority
+  listener_arn = var.lb_listener_config.listener_arn
+  priority     = var.lb_listener_config.priority
 
   action {
     type             = "forward"
@@ -285,7 +293,7 @@ resource "aws_lb_listener_rule" "app_rules" {
 
   condition {
     path_pattern {
-      values = var.route_path
+      values = var.lb_listener_config.path_pattern
     }
   }
 }
