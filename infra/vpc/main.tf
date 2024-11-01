@@ -1,3 +1,6 @@
+##############################################################################
+# variables
+##############################################################################
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
@@ -13,13 +16,32 @@ variable "azs" {
 variable "public_subnet_cidrs" {
   description = "CIDR blocks for the public subnets"
   type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+  default     = ["10.0.1.0/28", "10.0.2.0/28"]
 }
 
+variable "enable_dns_hostnames" {
+  type    = bool
+  default = false
+}
+
+
+variable "enable_dns_support" {
+  type    = bool
+  default = false
+}
+
+variable "assign_generated_ipv6_cidr_block" {
+  type    = bool
+  default = false
+}
+##############################################################################
+# resources
+##############################################################################
 resource "aws_vpc" "main" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_hostnames = true
-  enable_dns_support   = true
+  cidr_block                       = var.vpc_cidr
+  enable_dns_hostnames             = var.enable_dns_hostnames
+  enable_dns_support               = var.enable_dns_support
+  assign_generated_ipv6_cidr_block = var.assign_generated_ipv6_cidr_block
 
   tags = {
     Name = "ecs-cluster-vpc"
@@ -65,59 +87,9 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
-  name              = "/vpc/flow-logs"
-  retention_in_days = 30
-  depends_on        = [aws_vpc.main]
-}
-
-resource "aws_flow_log" "main" {
-  iam_role_arn    = aws_iam_role.vpc_flow_log_role.arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
-  traffic_type    = "ALL"
-  vpc_id          = aws_vpc.main.id
-  depends_on      = [aws_cloudwatch_log_group.vpc_flow_logs]
-}
-
-resource "aws_iam_role" "vpc_flow_log_role" {
-  name = "vpc-flow-log-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "vpc-flow-logs.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "vpc_flow_log_policy" {
-  name = "vpc-flow-log-policy"
-  role = aws_iam_role.vpc_flow_log_role.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams",
-        ]
-        Effect   = "Allow"
-        Resource = "*"
-      }
-    ]
-  })
-}
-
+##############################################################################
+# outputs
+##############################################################################
 output "vpc_id" {
   value = aws_vpc.main.id
 }

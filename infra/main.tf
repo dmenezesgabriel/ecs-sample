@@ -2,41 +2,11 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "vpc" {
-  source = "./vpc"
-}
-
-module "load_balancer" {
-  source     = "./load-balancer"
-  vpc_id     = module.vpc.vpc_id
-  subnet_ids = module.vpc.public_subnet_ids
-  apps       = var.apps
-}
-
-module "ecs_cluster" {
-  source                = "./ecs-cluster"
-  cluster_name          = "sample-ecs-cluster"
-  vpc_id                = module.vpc.vpc_id
-  alb_security_group_id = module.load_balancer.alb_security_group_id
-}
-
-variable "apps" {
-  description = "List of applications to deploy"
-  type = list(object({
-    name                     = string
-    container_image          = string
-    container_port           = number
-    cpu                      = string
-    memory                   = string
-    desired_count            = number
-    route_path               = string
-    enable_autoscaling       = bool
-    autoscaling_min_capacity = number
-    autoscaling_max_capacity = number
-    autoscaling_cpu_target   = number
-    environment_variables    = map(string)
-  }))
-  default = [
+locals {
+  ecs_cluster_name   = "sample-ecs-cluster"
+  elb_name           = "ecs-alb"
+  load_balancer_type = "application"
+  apps = [
     {
       name                     = "app1"
       container_image          = "dmenezesgabriel/fastapi-app1:v3"
@@ -44,13 +14,16 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      route_path               = "/app1"
+      route_path               = ["/app1*"]
+      health_route_path        = "/app1/health"
+      priority                 = 100
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP2_URL = "http://app2.sample-ecs-cluster.local:8000"
+        APP2_URL     = "http://app2.${local.ecs_cluster_name}.local:8000"
+        ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
     {
@@ -60,13 +33,16 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      route_path               = "/app2"
+      route_path               = ["/app2*"]
+      health_route_path        = "/app2/health"
+      priority                 = 200
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+        APP1_URL     = "http://app1.${local.ecs_cluster_name}.local:8000"
+        ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
     {
@@ -76,13 +52,16 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      route_path               = "/app3"
+      route_path               = ["/app3*"]
+      health_route_path        = "/app3/health"
+      priority                 = 300
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+        APP1_URL     = "http://app1.${local.ecs_cluster_name}.local:8000"
+        ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
     {
@@ -92,13 +71,16 @@ variable "apps" {
       cpu                      = "256"
       memory                   = "512"
       desired_count            = 2
-      route_path               = "/app4"
+      route_path               = ["/app4*"]
+      health_route_path        = "/app4/health"
+      priority                 = 400
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+        APP1_URL     = "http://app1.${local.ecs_cluster_name}.local:8000"
+        ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
     {
@@ -108,43 +90,85 @@ variable "apps" {
       cpu                      = "512"
       memory                   = "1024"
       desired_count            = 2
-      route_path               = "/app5"
+      route_path               = ["/app5*"]
+      health_route_path        = "/app5/health"
+      priority                 = 500
       enable_autoscaling       = true
       autoscaling_min_capacity = 1
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP1_URL = "http://app1.sample-ecs-cluster.local:8000"
+        APP1_URL     = "http://app1.${local.ecs_cluster_name}.local:8000"
+        ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     }
   ]
 }
 
-module "ecs_services" {
-  source = "./ecs-service"
-  count  = length(var.apps)
+# security groups
+resource "aws_security_group" "alb" {
+  name        = "ecs-alb-sg"
+  description = "Allow inbound traffic to ALB"
+  vpc_id      = module.vpc.vpc_id
 
-  cluster_id                     = module.ecs_cluster.cluster_id
-  vpc_id                         = module.vpc.vpc_id
-  app_name                       = var.apps[count.index].name
-  container_image                = var.apps[count.index].container_image
-  container_port                 = var.apps[count.index].container_port
-  cpu                            = var.apps[count.index].cpu
-  memory                         = var.apps[count.index].memory
-  desired_count                  = var.apps[count.index].desired_count
-  subnet_ids                     = module.vpc.public_subnet_ids
-  task_execution_role_arn        = module.ecs_cluster.task_execution_role_arn
-  ecs_tasks_security_group_id    = module.ecs_cluster.ecs_tasks_security_group_id
-  alb_security_group_id          = module.load_balancer.alb_security_group_id
-  lb_listener                    = module.load_balancer.lb_listener
-  target_group_arn               = module.load_balancer.target_group_arns[count.index]
-  environment_variables          = var.apps[count.index].environment_variables
-  enable_service_discovery       = true
-  service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
-  enable_autoscaling             = var.apps[count.index].enable_autoscaling
-  autoscaling_min_capacity       = var.apps[count.index].autoscaling_min_capacity
-  autoscaling_max_capacity       = var.apps[count.index].autoscaling_max_capacity
-  autoscaling_cpu_target         = var.apps[count.index].autoscaling_cpu_target
+  dynamic "ingress" {
+    for_each = [
+      {
+        protocol    = "tcp",
+        from_port   = 80,
+        to_port     = 80,
+        cidr_blocks = ["0.0.0.0/0"]
+      },
+      {
+        protocol    = "tcp",
+        from_port   = 443,
+        to_port     = 443,
+        cidr_blocks = ["0.0.0.0/0"]
+      }
+    ]
+    content {
+      protocol    = ingress.value.protocol
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
+
+  egress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  depends_on = [module.vpc]
+}
+
+resource "aws_security_group" "ecs_tasks" {
+  name        = "${local.ecs_cluster_name}-ecs-tasks-sg"
+  description = "Allow inbound traffic to ECS tasks"
+  vpc_id      = module.vpc.vpc_id
+
+  egress {
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  depends_on = [module.vpc]
+}
+
+resource "aws_security_group_rule" "allow_from_alb" {
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+  security_group_id        = aws_security_group.ecs_tasks.id
+  description              = "Allow inbound traffic from ALB to ECS tasks"
+
+  depends_on = [aws_security_group.alb, aws_security_group.ecs_tasks]
 }
 
 resource "aws_security_group_rule" "allow_inter_service_communication" {
@@ -152,9 +176,83 @@ resource "aws_security_group_rule" "allow_inter_service_communication" {
   from_port                = 0
   to_port                  = 65535
   protocol                 = "tcp"
-  source_security_group_id = module.ecs_cluster.ecs_tasks_security_group_id
-  security_group_id        = module.ecs_cluster.ecs_tasks_security_group_id
+  source_security_group_id = aws_security_group.ecs_tasks.id
+  security_group_id        = aws_security_group.ecs_tasks.id
   description              = "Allow communication between ECS tasks"
+
+  depends_on = [aws_security_group.ecs_tasks]
+}
+
+# Modules
+module "vpc" {
+  source                           = "./vpc"
+  enable_dns_hostnames             = true
+  enable_dns_support               = true
+  assign_generated_ipv6_cidr_block = true
+}
+
+module "load_balancer" {
+  source             = "./load-balancer"
+  elb_name           = local.elb_name
+  load_balancer_type = local.load_balancer_type
+  vpc_id             = module.vpc.vpc_id
+  subnet_ids         = module.vpc.public_subnet_ids
+  security_groups    = [aws_security_group.alb.id]
+
+  depends_on = [module.vpc, aws_security_group.alb]
+}
+
+resource "aws_lb_listener" "front_end" {
+  load_balancer_arn = module.load_balancer.elb_arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Hello, World!"
+      status_code  = "200"
+    }
+  }
+
+  depends_on = [module.load_balancer]
+}
+
+module "ecs_cluster" {
+  source       = "./ecs-cluster"
+  cluster_name = local.ecs_cluster_name
+  vpc_id       = module.vpc.vpc_id
+
+  depends_on = [module.vpc]
+}
+
+module "ecs_services" {
+  source = "./ecs-service"
+  count  = length(local.apps)
+
+  cluster_id                     = module.ecs_cluster.cluster_id
+  vpc_id                         = module.vpc.vpc_id
+  app_name                       = local.apps[count.index].name
+  container_image                = local.apps[count.index].container_image
+  container_port                 = local.apps[count.index].container_port
+  cpu                            = local.apps[count.index].cpu
+  memory                         = local.apps[count.index].memory
+  desired_count                  = local.apps[count.index].desired_count
+  subnet_ids                     = module.vpc.public_subnet_ids
+  security_groups                = [aws_security_group.ecs_tasks.id]
+  alb_security_group_id          = aws_security_group.alb.id
+  lb_listener                    = aws_lb_listener.front_end
+  route_path                     = local.apps[count.index].route_path
+  health_route_path              = local.apps[count.index].health_route_path
+  environment_variables          = local.apps[count.index].environment_variables
+  priority                       = local.apps[count.index].priority
+  enable_service_discovery       = true
+  service_discovery_namespace_id = module.ecs_cluster.service_discovery_namespace_id
+  enable_autoscaling             = local.apps[count.index].enable_autoscaling
+  autoscaling_min_capacity       = local.apps[count.index].autoscaling_min_capacity
+  autoscaling_max_capacity       = local.apps[count.index].autoscaling_max_capacity
+  autoscaling_cpu_target         = local.apps[count.index].autoscaling_cpu_target
 }
 
 # Policies for app1
@@ -246,5 +344,5 @@ resource "aws_iam_role_policy" "app2_s3_policy" {
 }
 
 output "alb_dns_name" {
-  value = module.load_balancer.alb_dns_name
+  value = module.load_balancer.elb_dns_name
 }

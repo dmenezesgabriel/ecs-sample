@@ -1,3 +1,6 @@
+##############################################################################
+# variables
+##############################################################################
 variable "cluster_id" {
   description = "ID of the ECS cluster"
   type        = string
@@ -47,14 +50,8 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "task_execution_role_arn" {
-  description = "ARN of the task execution role"
-  type        = string
-}
-
-variable "ecs_tasks_security_group_id" {
-  description = "ID of the ECS tasks security group"
-  type        = string
+variable "security_groups" {
+  type = list(string)
 }
 
 variable "alb_security_group_id" {
@@ -67,9 +64,16 @@ variable "lb_listener" {
   type        = any
 }
 
-variable "target_group_arn" {
-  description = "ARN of the target group for the service"
-  type        = string
+variable "route_path" {
+  type = list(string)
+}
+
+variable "priority" {
+  type = number
+}
+
+variable "health_route_path" {
+  type = string
 }
 
 variable "environment_variables" {
@@ -78,6 +82,7 @@ variable "environment_variables" {
   default     = {}
 }
 
+# Service discovery
 variable "enable_service_discovery" {
   description = "Whether to enable service discovery"
   type        = bool
@@ -90,6 +95,7 @@ variable "service_discovery_namespace_id" {
   default     = ""
 }
 
+# Autoscaling
 variable "enable_autoscaling" {
   description = "Whether to enable autoscaling for the service"
   type        = bool
@@ -114,14 +120,18 @@ variable "autoscaling_cpu_target" {
   default     = 70
 }
 
+##############################################################################
+# resources
+##############################################################################
+
 
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${var.app_name}"
   retention_in_days = 30
 }
 
-resource "aws_iam_role" "task_role" {
-  name = "${var.app_name}-task-role"
+resource "aws_iam_role" "ecs_task_execution_role" {
+  name = "${var.app_name}-ecs-task-execution-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -137,14 +147,36 @@ resource "aws_iam_role" "task_role" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.app_name}-ecs_task_role"
+
+  assume_role_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement" : [
+      {
+        "Effect" : "Allow",
+        "Principal" : {
+          "Service" : "ecs-tasks.amazonaws.com"
+        },
+        "Action" : "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
 resource "aws_ecs_task_definition" "app" {
   family                   = var.app_name
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.cpu
   memory                   = var.memory
-  execution_role_arn       = var.task_execution_role_arn
-  task_role_arn            = aws_iam_role.task_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -183,12 +215,12 @@ resource "aws_ecs_service" "app" {
 
   network_configuration {
     subnets          = var.subnet_ids
-    security_groups  = [var.ecs_tasks_security_group_id]
+    security_groups  = var.security_groups
     assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = var.target_group_arn
+    target_group_arn = aws_lb_target_group.app.arn
     container_name   = var.app_name
     container_port   = var.container_port
   }
@@ -200,7 +232,7 @@ resource "aws_ecs_service" "app" {
     }
   }
 
-  depends_on = [var.lb_listener]
+  depends_on = [var.lb_listener, aws_lb_target_group.app]
 }
 
 resource "aws_service_discovery_service" "this" {
@@ -223,6 +255,43 @@ resource "aws_service_discovery_service" "this" {
   }
 }
 
+# Load balancer
+resource "aws_lb_target_group" "app" {
+  name        = "${var.app_name}-tg"
+  port        = var.container_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
+
+  health_check {
+    path                = var.health_route_path
+    port                = var.container_port
+    healthy_threshold   = 2
+    unhealthy_threshold = 10
+    timeout             = 60
+    interval            = 300
+    matcher             = "200"
+  }
+}
+
+resource "aws_lb_listener_rule" "app_rules" {
+  listener_arn = var.lb_listener.arn
+  priority     = var.priority
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
+  condition {
+    path_pattern {
+      values = var.route_path
+    }
+  }
+}
+
+
+# Autoscaling group
 resource "aws_appautoscaling_target" "ecs_target" {
   count              = var.enable_autoscaling ? 1 : 0
   max_capacity       = var.autoscaling_max_capacity
@@ -248,6 +317,10 @@ resource "aws_appautoscaling_policy" "ecs_policy_cpu" {
   }
 }
 
+##############################################################################
+# outputs
+##############################################################################
+
 output "task_role_id" {
-  value = aws_iam_role.task_role.id
+  value = aws_iam_role.ecs_task_role.id
 }
