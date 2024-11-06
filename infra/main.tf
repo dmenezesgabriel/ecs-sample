@@ -140,39 +140,6 @@ locals {
         ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
-    {
-      name            = "app5"
-      container_image = "dmenezesgabriel/nextjs-app5:v9"
-      container_port  = 8000
-      cpu             = "512"
-      memory          = "1024"
-      desired_count   = 2
-      lb_target_group_config = {
-        protocol    = "HTTP",
-        target_type = "ip",
-        health_check = {
-          path                = "/app5/health",
-          healthy_threshold   = 2,
-          unhealthy_threshold = 10,
-          timeout             = 60,
-          interval            = 300,
-          matcher             = "200"
-        }
-      }
-      lb_listener_config = {
-        listener_arn = aws_lb_listener.front_end.arn
-        priority     = 500
-        path_pattern = ["/app5*"]
-      }
-      enable_autoscaling       = true
-      autoscaling_min_capacity = 1
-      autoscaling_max_capacity = 5
-      autoscaling_cpu_target   = 70
-      environment_variables = {
-        APP1_URL     = "http://app1.${local.ecs_cluster_name}.local:8000"
-        ALB_DNS_NAME = module.load_balancer.elb_dns_name
-      }
-    }
   ]
 }
 
