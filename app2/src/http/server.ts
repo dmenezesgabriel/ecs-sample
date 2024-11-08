@@ -1,11 +1,16 @@
 import express, { Request, Response, Router } from "express";
 import axios from "axios";
 import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-dist";
+import fs from "node:fs";
+import yaml from "yaml";
 
 dotenv.config();
 
 const APP1_URL = process.env.APP1_URL || "";
 const PORT = process.env.PORT || 3000;
+
+const swaggerUiPath = swaggerUi.absolutePath();
 
 class RootExpressAdapter {
   public router: Router;
@@ -92,6 +97,18 @@ class CommunicationExpressAdapter {
 
 const app = express();
 
+app.get("/app2/swagger.json", (req: Request, res: Response) => {
+  try {
+    const swaggerYamlPath = new URL("../data/swagger.yaml", import.meta.url);
+    const swaggerFile = fs.readFileSync(swaggerYamlPath, "utf8");
+    const swaggerSpec = yaml.parse(swaggerFile);
+    res.json(swaggerSpec);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load OpenAPI specification" });
+  }
+});
+
+app.use("/app2/swagger", express.static(swaggerUiPath));
 app.use("/app2", new RootExpressAdapter().router);
 app.use("/app2", new PerformanceExpressAdapter().router);
 app.use("/app2", new HealthExpressAdapter().router);

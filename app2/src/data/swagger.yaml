@@ -1,0 +1,67 @@
+openapi: "3.0.0"
+info:
+  title: "App2 API"
+  version: "1.0.0"
+  description: "API documentation for App2"
+paths:
+  /:
+    get:
+      summary: "Root endpoint"
+      responses:
+        "200":
+          description: "Successful response"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+  /cpu-intensive:
+    get:
+      summary: "CPU-intensive endpoint"
+      responses:
+        "200":
+          description: "Task completed"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+  /health:
+    get:
+      summary: "Health check endpoint"
+      responses:
+        "200":
+          description: "Service health"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  status:
+                    type: "string"
+  /call-app1:
+    get:
+      summary: "Call to App1"
+      responses:
+        "200":
+          description: "Message received from App1"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  message:
+                    type: "string"
+        default:
+          description: "Error response"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  error:
+                    type: "string"
