@@ -37,14 +37,14 @@ locals {
       autoscaling_max_capacity = 5
       autoscaling_cpu_target   = 70
       environment_variables = {
-        APP2_URL     = "http://app2.${local.ecs_cluster_name}.local:8000"
+        APP2_URL     = "http://app2.${local.ecs_cluster_name}.local:3000"
         ALB_DNS_NAME = module.load_balancer.elb_dns_name
       }
     },
     {
       name            = "app2"
-      container_image = "dmenezesgabriel/fastapi-app2:v3"
-      container_port  = 8000
+      container_image = "dmenezesgabriel/express-app2:v3"
+      container_port  = 3000
       cpu             = "256"
       memory          = "512"
       desired_count   = 2
