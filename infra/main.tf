@@ -43,7 +43,7 @@ locals {
     },
     {
       name            = "app2"
-      container_image = "dmenezesgabriel/express-app2:v3"
+      container_image = "dmenezesgabriel/fastify-app2:v2"
       container_port  = 3000
       cpu             = "256"
       memory          = "512"
