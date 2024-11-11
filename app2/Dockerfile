@@ -20,4 +20,7 @@ COPY --from=build /app/dist /app/dist
 COPY --from=build /app/package.json /app/package.json
 
 EXPOSE 3000
-CMD ["npm", "start"]
+
+ENV ADDRESS=0.0.0.0 PORT=3000
+
+CMD ["node", "dist/server.js"]
